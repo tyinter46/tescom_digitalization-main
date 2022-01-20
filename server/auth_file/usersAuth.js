@@ -3,9 +3,16 @@ const express = require("express");
 const Router = express.Router();
 const pool = require("../db.js");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 
-Router.post("/register", async (req, res) => {
+const {createToken} = require("./createAndVerifyToken")
+const {body, check} = require("express-validator")
+
+
+Router.post("/register", [
+  body("ogNumber").not().isEmpty().withMessage("ogNumber feild is empty"),
+  body("staffCategory").not().isEmpty().withMessage("staffCategory feild is empty"),
+  body("password").not().isEmpty().withMessage("password feild is empty"),
+], async (req, res) => {
   try {
     const { ogNumber, staffCategory, password } = req.body;
 
@@ -28,19 +35,13 @@ Router.post("/register", async (req, res) => {
           "INSERT INTO users (og_number, staff_category, password) VALUES ($1, $2, $3) RETURNING *",
           [ogNumber, staffCategory, hashedPassword]
         );
-        const token = jwt.sign(
-          {
-            id: user.users_id,
-            role: user.role,
-          },
-          process.env.SECRET_KEY,
-          { expiresIn: "24h" }
-        );
-        res.cookie("jwt", token, {
-          httpOnly: true,
-          maxAge: 60 * 60 * 24 * 1000,
-        });
-        res.status(200).json(token);
+         const token =  createToken(user)
+          res.cookie("jwt", token, {
+            httpOnly: true,
+            maxAge: 60 * 60 * 24 * 1000,
+          });
+     
+        res.status(200).json(  createToken(user));
         // console.log(req.cookies)
       }
     }
@@ -50,7 +51,11 @@ Router.post("/register", async (req, res) => {
   }
 });
 
-Router.post("/login", async (req, res) => {
+Router.post("/login",  [
+  check("password").isLength({min: 6}).withMessage('password has to be a minimun of 6 characters'),
+  body("ogNumber").not().isEmpty().withMessage("ogNumber feild is empty"),
+  body("password").not().isEmpty().withMessage("password feild is empty"),
+], async (req, res) => {
   try {
     const { ogNumber, password } = req.body;
 
@@ -63,19 +68,15 @@ Router.post("/login", async (req, res) => {
     }
     const validPassword = await bcrypt.compare(password, user.rows[0].password);
     if (validPassword) {
-      const token = jwt.sign(
-        {
-          id: user.users_id,
-          role: user.role,
-        },
-        process.env.SECRET_KEY,
-        { expiresIn: "24h" }
-      );
+    
+      const token = createToken(user)
       res.cookie("jwt", token, {
         httpOnly: true,
         maxAge: 60 * 60 * 24 * 1000,
       });
-      res.status(200).json(token.id);
+      
+      res.status(200).json(token);
+     // console.log(req.cookie)
     }
     else {
       res.status(200).json("Invalid OG-Number or password")
