@@ -2,22 +2,25 @@ const express = require('express')
 const Router = express.Router();
 const pool = require('../../db.js')
 
-//Get all combined school  teachers
+//Get all combined school non  teachers
 Router.get('/', async (req, res) => {
     try {
-        //console.log(pool)
         const nonTeachers = await pool.query("SELECT * from combined_non_teaching_staff")
         res.send(nonTeachers.rows);
+     //  console.log(req.userId) 
     } catch (error) {
         console.log(error.message)
     }
 })
+
+
 //Get one combined school teacher
 Router.get('/:id', async (req, res) => {
     try {
         const id = req.params.id
         const nonTeacher = await pool.query("SELECT * FROM combined_non_teaching_staff WHERE id = $1", [id])
         res.send(nonTeacher.rows[0])
+        console.log(req.userId, req.ogNumber, req.role, req.staffCategory)
     } catch (error) {
 
         console.log(error.message)
